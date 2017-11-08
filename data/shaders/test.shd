@@ -1,0 +1,98 @@
+shader "transparent"
+{
+	layer "base"
+	{
+		culling = none
+		depthtest = always
+		texture = "tex2.jpg"
+		blendmode = [src_alpha,one_minus_src_alpha]
+		color = (sin(1,1,0,0),1,1,0.3)
+	}
+}
+shader "spiral"
+{
+	layer "spin"
+	{
+		texture = "jesus.jpg"
+		uvgen = environment
+	}
+}
+shader "anim"
+{
+	layer "flame"
+	{
+		texture = [	"flame/flame1.jpg", "flame/flame2.jpg",\
+					"flame/flame3.jpg", "flame/flame4.jpg",\
+					"flame/flame5.jpg", "flame/flame6.jpg",\
+					"flame/flame7.jpg", "flame/flame8.jpg",10]
+		blendmode = [one,one]
+		color = (inverse_sawtooth(10,1,0,0),inverse_sawtooth(10,1,0,0),inverse_sawtooth(10,1,0,0))
+		//uv_transform = [stretch,1.5,(1,0)]
+		culling = none
+	}
+	layer "flame2"
+	{
+		texture = [	"flame/flame2.jpg", "flame/flame3.jpg",\
+					"flame/flame4.jpg", "flame/flame5.jpg",\
+					"flame/flame6.jpg", "flame/flame7.jpg",\
+					"flame/flame8.jpg", "flame/flame1.jpg",10]
+		blendmode = [one,one]
+		depthtest = equal
+		color = (sawtooth(10,1,0,0),sawtooth(10,1,0,0),sawtooth(10,1,0,0))
+		//uv_transform = [stretch,1.5,(1,0)]
+		culling = none
+	}
+	layer "ball"
+	{
+		texture = "flame/flameball.jpg"
+		depthtest = equal
+		blendmode = [one,one]
+		color = (sin(.4,1,0,.6),sin(.4,1,0,.6),sin(.4,1,0,.6))
+		//uv_transform = [stretch,1.5,(1,0)]
+		culling = none
+	}
+}
+shader "teleport"
+{
+	layer "teleport"
+	{
+		texture = "blur.tga"
+		blendmode = [dst_color, zero]
+		uv_transform = [rotate, linear(3)]
+	}
+}
+shader "teleport_scan"
+{
+	layer "color"
+	{
+		color = (1,1,1,.1)
+		blendmode = [src_alpha,one_minus_src_alpha]
+	}
+	layer "teleport"
+	{
+		texture = "teleport_line.tga"
+		blendmode = [one_minus_dst_color,one_minus_src_color]
+		uv_transform = [stretch,0.6,(0,1)]
+		uv_transform = [scroll,linear(0.45),(0,1)]
+		depthtest = equal
+	}
+}
+shader "mirror"
+{
+	layer "mirror"
+	{
+		color = (.5,.5,.5)
+		texture = "tex2.jpg"
+		blendmode = [one, one]
+	}
+/*
+	layer "highlight"
+	{
+		texture = "highlight.jpg"
+		color = (.6, .6, .6)
+		blendmode = [one, one]
+		depthtest = equal
+		uvgen = environment
+	}
+*/
+}

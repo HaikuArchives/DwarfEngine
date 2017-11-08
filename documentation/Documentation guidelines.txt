@@ -1,0 +1,149 @@
+Format of headers in .h files: 
+
+#ifndef D_WINDOW_H_
+#define D_WINDOW_H_
+
+/*
+ *	    The Dwarf Engine 3D Library
+ *          copyright (c) 2000
+ *
+ *  #include <license.txt>
+ *
+ */
+
+
+
+namespace dwarf
+{
+	/*!
+		description
+	*/
+	
+	enum MinEnum
+	{
+		X				= 0,
+		Y				= 1
+	};
+
+
+
+	/*!
+		\brief a window
+		blah blah..
+	*/
+
+	class Window
+	{
+	public:
+
+		Window();
+		~Window();
+		
+	private:
+		
+		uint32 m_member;
+
+	};
+
+} // dwarf
+
+#endif // D_WINDOW_H_
+
+Format of headers i .cpp files:
+
+/*
+ *	    The Dwarf Engine 3D Library
+ *          copyright (c) 2000
+ *
+ *  #include <license.txt>
+ *
+ */
+
+
+#include "Window.h"
+
+
+
+/*!
+	description
+*/
+Window::Window()
+{
+
+}
+
+
+/*!
+	description
+*/
+uint32 MyFunction()
+{
+}
+
+
+
+#ifndef UNICODE
+#	define TEXT(str) str
+#else
+#	define TEXT(str) L##str
+#endif
+
+
+template <class CHAR> class StringBase
+
+const CHAR *Ptr();
+
+String minsträng = "hahaha";
+char * buffer = new char[minsträng.Length()+1];
+minsträng.ToAscii(buffer, minsträng.Length()+1);
+
+
+Name standard for virtual hook functions: virtual void OnXXX(...). e.g. OnMove, OnSize
+
+Variables should be named using non-capitals, and member variables should have prefix m_ .
+
+Defines are named using capitals only; with prefix D_ .
+
+use the D_ASSERT macro as often as possible.
+prefer D_ASSERT_MESSAGE macro over D_ASSERT macro.
+
+
+
+
+1 Documentation guidlines
+
+1.1 We use the QT style documentation comments
+
+//! one line comment
+
+/*!
+	multiline comment
+*/
+
+We try to use the multiline comment as often as possible to make it easy to add more comments to an existing comment
+
+1.2 We use the special commands as often as possible
+
+\image doc_format file	the doc_format should be "html"
+\class class_name
+\example file_name	inserts a sample file
+\param parameter_name	describes a parameter
+\sa method_name ...	definies See also references
+\return		describes the returnvalue
+\warning
+etc.
+
+1.3 Every public method should have a brief description and if needed, a full description.
+
+1.4 All documentation is placed in the source files if possible. If methods are inlined, documentation is placed at the code (not in the class definition). If the class is an abstract class (which means it doesn't have any code) the documentation has to be placed in the class definition.
+
+1.5 the tags should be typed in the following order
+	\brief
+	\param
+	\return
+	\warning
+	\sa
+
+2 sample code
+
+2.1 The examples should be kept as simple as possible. No files should be in the example directory if they don't really need to be there. e.g. no resource files (if they're not needed). Each example should show one thing, and made with expansion in mind (the user probably wants to experiment with it).

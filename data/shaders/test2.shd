@@ -1,0 +1,60 @@
+shader "effect"
+{
+	layer "test"
+	{
+		color = ( 0,0, sin(3,1,0,0))
+		texture = "env.jpg"
+		uvgen = environment
+	}
+}
+shader "effect2"
+{
+	layer "test"
+	{
+		texture = "env2.jpg"
+		uvgen = environment
+	}
+	layer "quad"
+	{
+		color = (0,triangle(1,.2,0,.1),sin(1,1,0,0),.4)
+		blendmode = [src_alpha,one_minus_src_alpha]
+	}
+}
+shader "bouncy"
+{
+	layer "test"
+	{
+		texture = "env2.jpg"
+		uvgen = environment
+	}
+}
+shader "cartoon"
+{
+	layer "highlight"
+	{
+		//blendmode = [src_alpha, one_minus_src_alpha]
+		color = (1,0,0)
+		texture = "toonenv.jpg"
+		uvgen = environment
+		culling = front
+	}
+	layer "outline"
+	{
+		blendmode = [one, one]
+		color = (1,1,1)
+		fillmode = wireframe
+		linewidth = 2
+		depthtest = less_or_equal
+	}
+}
+shader "shade"
+{
+	layer "color"
+	{
+		blendmode = [src_alpha, one_minus_src_alpha]
+		color = (sin(2, 1, 0, 0),\
+				0,\
+				sin(2, 1, 0, 1/2),\
+				0.2)
+	}
+}

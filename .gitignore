@@ -1,0 +1,5 @@
+CVS/
+*.exe
+*.dll
+*.lib
+.DS_Store

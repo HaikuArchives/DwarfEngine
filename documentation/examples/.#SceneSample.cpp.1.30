@@ -1,0 +1,608 @@
+/*
+ *	    The Dwarf Engine 3D Library
+ *          copyright (c) 2000
+ *
+ *  #include <license.txt>
+ *
+ */
+
+#include "Dwarf.h"
+#include "ClearView.h"
+#include "DrawFPS.h"
+#include "InputHandlers.h"
+#include "Scene.h"
+#include "Entity.h"
+#include "Sector.h"
+#include "Quaternion.h"
+#include "Shader/ShaderParser.h"
+#include "Euler.h"
+#include "Portal.h"
+#include "VertexArray.h"
+#include "TCBSpline.h"
+#include "GenericPortal.h"
+
+using namespace dwarf;
+
+class TestSector : public Sector
+{
+public:
+	TestSector(Scene &scene, HTexture texture):
+	Sector(scene),
+	m_array(RenderingDevice::QUADS, 8, true, true)
+	{
+		m_state.Enable(State::TEXTURE_2D);
+		m_state.Disable(State::CULL_FACE);
+		m_state.SetShadeModel(RenderingDevice::SMOOTH);
+		m_state.SetTexture(texture);
+
+		m_array.SetLength(16, 4*6);
+
+
+		m_array.AddVertex(Vertex<3>(-200,200,-200),	Point(0, 1), Color(0, 0, 0));
+		m_array.AddVertex(Vertex<3>(-200,-200,-200),	Point(0, 0), Color(0, 0, 0));
+		m_array.AddVertex(Vertex<3>(-200,-200,200),	Point(1, 0), Color(1, 0, 1));
+		m_array.AddVertex(Vertex<3>(-200,200,200),		Point(1, 1), Color(0, 0, 1));
+		
+		m_array.AddVertex(Vertex<3>(200,200,-200),		Point(1, 1), Color(0, 1, 1));
+		m_array.AddVertex(Vertex<3>(200,-200,-200),	Point(1, 0), Color(0, 1, 0));
+		m_array.AddVertex(Vertex<3>(200,-200,200),		Point(0, 0), Color(1, 1, 0));
+		m_array.AddVertex(Vertex<3>(200,200,200),		Point(0, 1), Color(1, 0, 0));
+		
+
+		m_array.AddVertex(Vertex<3>(-200,200,-200),	Point(1, 0), Color(0, 0, 0));
+		m_array.AddVertex(Vertex<3>(-200,-200,-200),	Point(0, 1), Color(0, 0, 0));
+		m_array.AddVertex(Vertex<3>(-200,-200,200),	Point(1, 1), Color(0, 0, 0));
+		m_array.AddVertex(Vertex<3>(-200,200,200),		Point(0, 0), Color(0, 0, 0));
+
+		m_array.AddVertex(Vertex<3>(200,200,-200),		Point(1, 1), Color(0, 0, 0));
+		m_array.AddVertex(Vertex<3>(200,-200,-200),	Point(0, 0), Color(0, 0, 0));
+		m_array.AddVertex(Vertex<3>(200,-200,200),		Point(1, 0), Color(0, 0, 0));
+		m_array.AddVertex(Vertex<3>(200,200,200),		Point(0, 1), Color(0, 0, 0));
+		
+
+	// left
+		m_array.AddIndex(0);
+		m_array.AddIndex(1);
+		m_array.AddIndex(2);
+		m_array.AddIndex(3);
+
+	// right
+		m_array.AddIndex(4);
+		m_array.AddIndex(5);
+		m_array.AddIndex(6);
+		m_array.AddIndex(7);
+
+	// front
+		m_array.AddIndex(0);
+		m_array.AddIndex(1);
+		m_array.AddIndex(5);
+		m_array.AddIndex(4);
+		
+	// back
+		m_array.AddIndex(2);
+		m_array.AddIndex(3);
+		m_array.AddIndex(7);
+		m_array.AddIndex(6);
+
+
+	// bottom
+		m_array.AddIndex(9);
+		m_array.AddIndex(10);
+		m_array.AddIndex(14);
+		m_array.AddIndex(13);
+
+	// top
+		m_array.AddIndex(8);
+		m_array.AddIndex(11);
+		m_array.AddIndex(15);
+		m_array.AddIndex(12);
+		
+	}
+
+	void DrawSector(RenderingDevice &device, const Camera &camera, int32 depth) const
+	{
+		Sector::DrawSector(device, camera, depth);
+
+		device.SetStates(m_state);
+		device.Draw(m_array);
+	}
+
+private:
+
+	State m_state;
+	VertexArray m_array;
+
+};
+
+
+
+class OutdoorSector : public Sector
+{
+public:
+	OutdoorSector(Scene &scene, Sector *sector, HTexture ground, HTexture light_map):
+		Sector(scene),
+		m_ground_tex(ground),
+		m_light_map(light_map),
+		m_array(RenderingDevice::QUADS, 8, true),
+		m_skybox(RenderingDevice::QUADS, 8)
+	{
+		m_state.Disable(State::CULL_FACE);
+		m_state.SetColor(Color(0,0,0));
+
+		ListArray<Portal::poly_vertex> poly;
+		poly.AddItem(Portal::poly_vertex(Vertex<3>(-40, 40, 0), Point(0, 1)));
+		poly.AddItem(Portal::poly_vertex(Vertex<3>(40, 40, 0), Point(1, 1)));
+		poly.AddItem(Portal::poly_vertex(Vertex<3>(40, -40, 0), Point(1, 0)));
+		poly.AddItem(Portal::poly_vertex(Vertex<3>(-40, -40, 0), Point(0, 0)));
+
+		GenericPortal portal(Object(Vertex<3>(0,0,100), Quaternion(Euler(0,D_PI*0.1,0)), sector), poly);
+		portal.SetShader(HShader(TEXT("teleport")));
+
+		m_portal = portal;
+
+		
+		m_skybox.SetLength(16, 4*6);
+		
+		
+		m_skybox.AddVertex(Vertex<3>(-1000,1000,-1000));
+		m_skybox.AddVertex(Vertex<3>(-1000,-1000,-1000));
+		m_skybox.AddVertex(Vertex<3>(-1000,-1000,1000));
+		m_skybox.AddVertex(Vertex<3>(-1000,1000,1000));
+		
+		m_skybox.AddVertex(Vertex<3>(1000,1000,-1000));
+		m_skybox.AddVertex(Vertex<3>(1000,-1000,-1000));
+		m_skybox.AddVertex(Vertex<3>(1000,-1000,1000));
+		m_skybox.AddVertex(Vertex<3>(1000,1000,1000));
+		
+		m_skybox.AddVertex(Vertex<3>(-1000,1000,-1000));
+		m_skybox.AddVertex(Vertex<3>(-1000,-1000,-1000));
+		m_skybox.AddVertex(Vertex<3>(-1000,-1000,1000));
+		m_skybox.AddVertex(Vertex<3>(-1000,1000,1000));
+		
+		m_skybox.AddVertex(Vertex<3>(1000,1000,-1000));
+		m_skybox.AddVertex(Vertex<3>(1000,-1000,-1000));
+		m_skybox.AddVertex(Vertex<3>(1000,-1000,1000));
+		m_skybox.AddVertex(Vertex<3>(1000,1000,1000));
+
+
+		// left
+		m_skybox.AddIndex(0);
+		m_skybox.AddIndex(1);
+		m_skybox.AddIndex(2);
+		m_skybox.AddIndex(3);
+		
+		// right
+		m_skybox.AddIndex(4);
+		m_skybox.AddIndex(5);
+		m_skybox.AddIndex(6);
+		m_skybox.AddIndex(7);
+		
+		// front
+		m_skybox.AddIndex(0);
+		m_skybox.AddIndex(1);
+		m_skybox.AddIndex(5);
+		m_skybox.AddIndex(4);
+		
+		// back
+		m_skybox.AddIndex(2);
+		m_skybox.AddIndex(3);
+		m_skybox.AddIndex(7);
+		m_skybox.AddIndex(6);
+		
+		// bottom
+		m_skybox.AddIndex(9);
+		m_skybox.AddIndex(10);
+		m_skybox.AddIndex(14);
+		m_skybox.AddIndex(13);
+		
+		// top
+		m_skybox.AddIndex(8);
+		m_skybox.AddIndex(11);
+		m_skybox.AddIndex(15);
+		m_skybox.AddIndex(12);
+		
+
+		m_array.SetLength(4, 4);
+
+		m_array.AddVertex(Vertex<3>(-1000,-100,-1000),	Point(0, 1));
+		m_array.AddVertex(Vertex<3>(1000,-100,-1000),	Point(0, 0));
+		m_array.AddVertex(Vertex<3>(1000,-100,1000),	Point(1, 0));
+		m_array.AddVertex(Vertex<3>(-1000,-100,1000),	Point(1, 1));
+
+		m_array.AddIndex(0);
+		m_array.AddIndex(1);
+		m_array.AddIndex(2);
+		m_array.AddIndex(3);
+
+	}
+
+	void DrawSector(RenderingDevice &device, const Camera &camera, int32 depth) const
+	{
+		m_portal.Draw(device, camera, depth);
+		Sector::DrawSector(device, camera, depth);
+// draw the skybox
+		device.SetStates(m_state);
+		device.Draw(m_skybox);
+
+		device.SetColor(Color(1,1,1));
+		device.EnableState(RenderingDevice::TEXTURE_2D);
+		device.UseTexture(0, m_ground_tex);
+		device.Draw(m_array);
+
+		device.UseTexture(0, m_light_map);
+		device.EnableState(RenderingDevice::BLEND);
+		device.SetDepthFunc(RenderingDevice::EQUAL);
+		device.SetBlendMode(RenderingDevice::ZERO, RenderingDevice::SRC_COLOR);
+		device.Draw(m_array);
+	}
+
+	GenericPortal m_portal;
+
+private:
+
+	HTexture m_ground_tex;
+	HTexture m_light_map;
+	State m_state;
+	VertexArray m_array;
+	VertexArray m_skybox;
+
+};
+
+
+
+class Model: public Entity
+{
+public:
+	Model(HMesh mesh):Entity(), m_mesh(mesh), m_time(0)
+	{
+		m_mesh->SetShader(HShader(TEXT("spiral")));
+	}
+
+private:
+	virtual void Draw(RenderingDevice &device, const Camera &frustum/*, uList<uLight*> *lightsources*/) const
+	{
+		device.Draw(m_mesh);
+	}
+
+	virtual void Tick(float frame_time)
+	{
+		m_time += frame_time;
+		RotateTo(Quaternion(m_time/2.0f, Vector(.4, .6, .1)));
+		Entity::Tick(frame_time);
+	}
+
+	virtual void OnTimer()
+	{
+		MoveBy(Vector(0,0,1));
+		SetTimer(1.0f);
+	}
+
+	virtual void OnSectorAdd()
+	{
+		SetTimer(1.0f);
+	}
+
+	HMesh m_mesh;
+	float m_time;
+};
+
+
+class Particle: public Entity
+{
+public:
+	Particle()
+	{
+		Vertex<3> first = Vertex<3>(Rand(), Rand(), Rand());
+		m_spline.AddKey(first, 0, 0, 0, 0);
+		float time = 0.0f;
+		for (int32 i = 1; i < 10; i++)
+		{
+			time += ((float)rand())/((float)RAND_MAX) * 10.0f;
+			m_spline.AddKey(Vertex<3>(Rand(), Rand(), Rand()), 0, 0, 0, time);
+		}
+		m_spline.AddKey(first, 0, 0, 0, time + 1);
+		m_duration = time + 1;
+
+		m_iterator = m_spline.Begin();
+		m_old_pos2 = m_old_pos = m_pos = first;
+	}
+
+private:
+
+	virtual void Draw(RenderingDevice &device, const Camera &frustum/*, uList<uLight*> *lightsources*/) const
+	{
+		device.SetStates(m_state);
+		device.Begin(RenderingDevice::LINE_STRIP);
+		device.AddVertex(m_pos);
+		device.AddVertex(m_old_pos);
+		device.AddVertex(m_old_pos2);
+		device.End();
+	}
+
+	virtual void Tick(float frame_time)
+	{
+		m_iterator.Step(frame_time);
+		if (m_iterator.Time() > m_duration) m_iterator = m_spline.Begin();
+		m_old_pos2 = m_old_pos;
+		m_old_pos = m_pos;
+		m_pos = m_iterator.Value();
+	}
+	
+
+	TCBSpline<Vertex<3> > m_spline;
+	TCBSpline<Vertex<3> >::Iterator m_iterator;
+	float m_duration;
+
+	Vertex<3> m_pos;
+	Vertex<3> m_old_pos;
+	Vertex<3> m_old_pos2;
+	State m_state;
+
+	float Rand()
+	{
+		return ((float)rand())/((float)RAND_MAX) * 600.0f - 300.0f;
+	}
+
+};
+
+
+
+
+// this view draws the scene through the eyes of the camera.
+// it also listens for input and moves the camera accordingly.
+class MyView : public CameraView
+{
+
+public:
+
+	MyView(const Rect &frame, int32 resize_mode, Camera &camera, Window &window):
+		CameraView(frame, resize_mode, camera),
+		m_forward(false),
+		m_backwards(false),
+		m_left(false),
+		m_right(false),
+		m_control_portal(false),
+		m_camera(camera),
+		m_window(window)
+	{}
+
+	virtual void KeyDown(dchar character, uint32 scancode, uint32 modifiers)
+	{
+		// toggle relative mouse mode with escape
+		if (scancode == InputReceiver::SC_ESCAPE)
+			m_window.GetInputServer()->SetRelativeMouseMode(!m_window.GetInputServer()->RelativeMouseMode());
+
+		switch(character)
+		{
+		case CHAR(' '):
+			m_control_portal = !m_control_portal;
+			break;
+		case CHAR('w'):
+		case CHAR('W'):
+			m_forward = true;
+			break;
+		case CHAR('s'):
+		case CHAR('S'):
+			m_backwards = true;
+			break;
+		case CHAR('a'):
+		case CHAR('A'):
+			m_left = true;
+			break;
+		case CHAR('d'):
+		case CHAR('D'):
+			m_right = true;
+			break;
+		default:
+			CameraView::KeyDown(character, scancode, modifiers);
+		}
+	}
+
+	virtual void KeyUp(dchar character, uint32 scancode, uint32 modifiers)
+	{
+		switch(character)
+		{
+		case CHAR('w'):
+		case CHAR('W'):
+			m_forward = false;
+			break;
+		case CHAR('s'):
+		case CHAR('S'):
+			m_backwards = false;
+			break;
+		case CHAR('a'):
+		case CHAR('A'):
+			m_left = false;
+			break;
+		case CHAR('d'):
+		case CHAR('D'):
+			m_right = false;
+			break;
+		default:
+			CameraView::KeyDown(character, scancode, modifiers);
+		}
+	}
+
+
+	virtual void RelativeMouseMove(const Point &position)
+	{
+		if (m_control_portal)
+		{
+			m_portal_rotation.heading += position.x() * -.003;
+			m_portal_rotation.pitch += position.y() * .003;
+			
+			if (m_portal_rotation.pitch > D_PI *.5) m_portal_rotation.pitch = D_PI * .5;
+			else if (m_portal_rotation.pitch < D_PI *-.5) m_portal_rotation.pitch = D_PI * -.5;
+
+			((OutdoorSector*)m_camera.GetSector())->m_portal.Target().RotateTo(Quaternion(m_portal_rotation));
+			((OutdoorSector*)m_camera.GetSector())->m_portal.Update();
+		}
+		else
+		{
+			m_rotation.heading += position.x() * -.003;
+			m_rotation.pitch += position.y() * .003;
+
+			if (m_rotation.pitch > D_PI *.5) m_rotation.pitch = D_PI * .5;
+			else if (m_rotation.pitch < D_PI *-.5) m_rotation.pitch = D_PI * -.5;
+		
+			m_camera.RotateTo(Quaternion(m_rotation));
+		}
+	}
+	
+	virtual void Tick(float frame_time)
+	{
+		if (m_control_portal)
+		{
+			if (m_forward) ((OutdoorSector*)m_camera.GetSector())->m_portal.Target().MoveForward(frame_time * 100.0f);
+			if (m_backwards) ((OutdoorSector*)m_camera.GetSector())->m_portal.Target().MoveForward(frame_time * -100.0f);
+			if (m_right) ((OutdoorSector*)m_camera.GetSector())->m_portal.Target().MoveRight(frame_time * 100.0f);
+			if (m_left) ((OutdoorSector*)m_camera.GetSector())->m_portal.Target().MoveRight(frame_time * -100.0f);
+			((OutdoorSector*)m_camera.GetSector())->m_portal.Update();
+		}
+		else
+		{
+			if (m_forward) m_camera.MoveForward(frame_time * 100.0f);
+			if (m_backwards) m_camera.MoveForward(frame_time * -100.0f);
+			if (m_right) m_camera.MoveRight(frame_time * 100.0f);
+			if (m_left) m_camera.MoveRight(frame_time * -100.0f);
+		}
+	}
+	
+private:
+
+	bool m_forward;
+	bool m_backwards;
+	bool m_left;
+	bool m_right;
+
+	bool m_control_portal;
+
+	Camera &m_camera;
+	Window &m_window;
+
+	Euler m_rotation;
+	Euler m_portal_rotation;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+class Ticker : public View
+{
+public:
+	Ticker(Scene &scene):
+		View(Rect(0,0,1,1)),
+		m_scene(scene)
+	{}
+
+	void Tick(float frame_time)
+	{
+		m_scene.Tick(frame_time);
+	}
+private:
+	Scene &m_scene;
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+int32 DwarfMain(Array<String> &cmdLine)
+{
+//	PakFile dir(TEXT("data.zip"));
+	Directory dir(TEXT("../data"));
+	
+	Texture::SetFileSystem(&dir);
+
+	// create the window
+	Window window(Rect(0,0,480,480), TEXT("portal sample"), Window::CENTERED);
+
+	// tell the shader where to find the shader-files
+	Shader::ShaderParser()->AddFile(&dir, TEXT("shaders/test.shd"));
+	
+
+	// create a clear view and add it to the window.
+	// this view clears the entire window every frame, so
+	// it's important to add this view first
+	ClearView clear_view(window.Bounds(), Color(0,0,0));
+	window.AddChild(&clear_view);
+
+	// create the scene
+	Scene scene;
+
+	// create the two sectors and add them to the scene
+	TestSector sector(scene, HTexture(TEXT("jesus.jpg")));
+	scene.AddSector(&sector);
+
+	OutdoorSector main_sector(scene, &sector, HTexture(TEXT("jesus.jpg")), HTexture(&dir, TEXT("blur.tga")));
+	scene.AddSector(&main_sector);
+
+	// create a camera, add it to the scene and to the sector
+	Camera camera;
+	camera.MoveTo(Vertex<3>(0, 0, 100));
+	camera.LookAt(Vertex<3>(0, 0, 0));
+
+	int32 id = scene.AddCamera(&camera);
+	main_sector.AddCamera(id);
+
+	// create the view that draws everything, attach the camera to it
+	MyView camera_view(window.Bounds(), View::KEEP_PROPORTIONS, camera, window);
+	window.AddChild(&camera_view);
+
+	InputServer input(&window);
+	input.Add(&camera_view);
+	input.SetRelativeMouseMode(true);
+
+
+	// create an entity and add it to the scene and sector
+	Model model(HMesh(new Mesh(&dir, TEXT("impsym.3ds"))));
+	model.MoveTo(Vertex<3>(0, 0, 50));
+	id = scene.AddEntity(&model);
+	sector.AddEntity(id);
+
+
+	Particle particles[20];
+	for (int32 i = 0; i < 20; i++)
+	{
+		id = scene.AddEntity(&particles[i]);
+		main_sector.AddEntity(id);
+	}
+
+	// load a font
+	Font font(&dir, TEXT("fonts/Verdana, Bold Italic.font"));
+	
+	// create and add a string view with some help-text
+	StringView string_view(Rect(0,window.Height() - 45,50,40),15, Color(1, .4, .8, 1), View::FOLLOW_TOP_LEFT);
+	string_view.SetFont(font);
+	string_view.SetString(TEXT("press escape to toggle mouse look\nwsad to move, space to control portal"));
+	window.AddChild(&string_view);
+
+	// maybe we should make it possible to add a scene to a window
+	// so that it is ticked. Now I have to make a dummy view that
+	// ticks the scene.
+	Ticker dummy(scene);
+	window.AddChild(&dummy);
+
+	// show and run the window
+	window.Show();
+	window.Run();
+
+	return 0;
+}
